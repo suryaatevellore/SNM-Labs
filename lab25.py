@@ -107,9 +107,9 @@ class Element:
             # print(self.neighbors)
 
 def main():
-    username = "cisco"
-    password = "cisco"
-    secret = "cisco"
+    username = "exam"
+    password = "exam"
+    secret = "exam"
     # device_ip = [
     #     "192.168.130.251",
     #     "192.168.130.252",
