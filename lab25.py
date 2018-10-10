@@ -104,7 +104,7 @@ class Element:
             for item in device[1:]:
                 if item:
                     self.neighbors[device_hostname][item.split(":")[0].strip()] = item.split(":")[1].strip()
-            print(self.neighbors)
+            # print(self.neighbors)
 
 def main():
     username = "cisco"
