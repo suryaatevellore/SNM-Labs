@@ -4,6 +4,17 @@ from netmiko import ConnectHandler
 from netmiko.ssh_exception import NetMikoTimeoutException
 
 class AdjacencyList:
+    '''
+        Class for creating Adjacency List
+
+        Variables :
+            Adj_device - List to store all elements
+
+        Functions:
+            add_devices - Takes an element object and appends it to Adj_device List
+
+            show_devices - Show all devices along with neighbors
+    '''
     def __init__(self):
         self.Adj_device = []
 
@@ -12,6 +23,7 @@ class AdjacencyList:
 
     def show_devices(self):
         for each_device in self.Adj_device:
+            print("================================================")
             print(each_device.hostname)
             for each_neighbor_name, each_neighbor_params in each_device.neighbors.items():
                 print(f"    Neighbor Name: {each_neighbor_name}")
@@ -19,22 +31,29 @@ class AdjacencyList:
                 print(f"    Neighbor Platform : {each_neighbor_params.get('Platform', None)}")
                 print(f"    Neighbor Type : {each_neighbor_params.get('Capabilities', None)}")
                 print(f"    Self Local Interface : {each_neighbor_params.get('Interface', None)}")
+                print(f"    Local VLAN : {each_neighbor_params.get('Native VLAN', None)}")
                 print(f"    Neighbor Local Interface : {each_neighbor_params.get('Port ID (outgoing port)', None)}")
+                print(f"    Neighbor VLAN : {each_neighbor_params.get('Native VLAN', None)}")
+
                 print("\n")
 
 
-
-        # for each_device in self.Adj_device:
-        #     print(each_device.hostname)
-        #     print(f"       Neighbor Name : {each_device.neighbors['name']}")
-        #     print(f"       Neighbor IP : {each_device.neighbors['IP']}")
-        #     print(f"       Neighbor Platform : {each_device.neighbors['platform']}")
-        #     print(f"       Neighbor Capabilities : {each_device.neighbors['capabilities']}")
-        #     print(f"       Neighbor Local Interface : {each_device.neighbors['Local Interface']}")
-        #     print(f"       Neighbor Remote Port : {each_device.neighbors['Remote port']}")
-        #     print(f"       Neighbor VLAN : {each_device.neighbors['VLAN']}")
-
 class Element:
+    '''
+        Class for defining each element of Adjacenct List
+        This is basically the nodes that we will be logging in
+
+        Variables:
+            device_ip : Device IP of device
+            hostname : Hostname of device
+            neighbors = Dictionary of all neighbors of this device
+
+        Functions:
+            Login : Login into each of the devices
+            calculate_neighbors : Output formatting for data gathered from each neighbor
+            Outputs a structure neighbors : {Neighbor1: {Params}, Neighbor N : {Params}}
+
+    '''
     def __init__(self, device_ip):
         self.device_ip = device_ip
         self.hostname = ""
@@ -64,12 +83,13 @@ class Element:
                 output = net_connect.send_command("sh cdp neigh det | i (ID|IP add|Plat|Interface|Port ID|VLAN)")
 
 
-                #Hostname
+            #Hostname
             find_hostname = net_connect.find_prompt()
             self.hostname = find_hostname.split("#")[0]
 
-
             return output
+
+
         except (EOFError, NetMikoTimeoutException):
             print('SSH is not enabled for this device.')
             sys.exit()
@@ -78,63 +98,40 @@ class Element:
         temp = output.split("\n")
         device_data = re.findall("(Device ID: [A-Za-z0-9.]+)\n(\s\sIP address: [\d.]+\n)?(Platform: [a-zA-Z\s]+,)\s\s(Capabilities: [a-zA-Z\s]+\n)(Interface: [A-Za-z0-9\/]+,)\s\s(Port ID .*: [a-zA-Z0-9\/]+)\n(Native VLAN: [\d]+)?", output)
 
-        print("Total Device Data",device_data)
         for device in device_data:
             device_hostname = device[0].split(":")[1]
             self.neighbors[device_hostname] = {}
             for item in device[1:]:
                 if item:
                     self.neighbors[device_hostname][item.split(":")[0].strip()] = item.split(":")[1].strip()
-
-        # temp[0]
-        # name, Parameters = output.split("\n")[0].strip(), output.split("\n")[1:]
-        # print("output", Parameters)
-        # temp={}
-        # for item in Parameters:
-        #     temp[name+item.split(":")[0]] = item.split(":")[1]
-
-        # print(temp)
-        # self.neighbors[name] = Parameters
-
-        # self.neighbors['name'] = neighbor_data[0]
-        # # print(f"Neighbors name {self.neighbors['name']}")
-        # self.neighbors['IP'] = neighbor_data[1].strip()
-        # self.neighbors['platform'], self.neighbors['capabilities'] = neighbor_data[2].strip().split(",")
-        # self.neighbors['Local Interface'], self.neighbors['Remote port'] = neighbor_data[3].strip().split(",")
-        # self.neighbors['VLAN'] = neighbor_data[4]
-
+            print(self.neighbors)
 
 def main():
     username = "cisco"
     password = "cisco"
     secret = "cisco"
-    device_ip = [
-        "192.168.130.251",
-        "192.168.130.252",
-        "192.168.130.253"
-    ]
+    # device_ip = [
+    #     "192.168.130.251",
+    #     "192.168.130.252",
+    #     "192.168.130.253"
+    # ]
 
-    # data = input("Enter all device IPs seperated by space >")
-    # if data:
-    #    device_ip = data.strip().split()
-    # else:
-    #     print("Data format incorrect. You prbably pressed enter by mistake")
+    data = input("Enter all device IPs seperated by space > ")
+    if data:
+       device_ip = data.strip().split()
+    else:
+        print("Data format incorrect. You probably pressed enter by mistake")
 
     Adj_list = AdjacencyList()
 
     for each_item in device_ip:
         device = Element(each_item)
-        print(f"device initialised to {each_item}")
         neighbor_data = device.login(username, password, secret, each_item)
         device.calculate_neighbors(neighbor_data)
-        print("This is the type of device", device.hostname)
         Adj_list.add_devices(device)
 
-    print(Adj_list)
+    #Show all devices
     Adj_list.show_devices()
-
-
-    print("Done with constructions")
 
 if __name__ == "__main__":
     main()
